@@ -1,5 +1,7 @@
 package com.leaning.linkedin.user.service;
 
+import com.leaning.linkedin.user.clientDto.Person;
+import com.leaning.linkedin.user.clients.ConnectionClient;
 import com.leaning.linkedin.user.dto.LoginRequestDto;
 import com.leaning.linkedin.user.dto.SignupRequestDto;
 import com.leaning.linkedin.user.dto.UserDto;
@@ -12,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Slf4j
@@ -21,11 +24,20 @@ public class AuthService {
     private final UserRepository userRepository;
     private final ModelMapper modelMapper;
     private final JWTService jwtService;
+    private final ConnectionClient connectionClient;
 
+    @Transactional
     public UserDto signUp(SignupRequestDto signupRequestDto) {
         User user = modelMapper.map(signupRequestDto, User.class);
         user.setPassword(PasswordUtil.hashPassword(signupRequestDto.getPassword()));
-        return modelMapper.map(userRepository.save(user), UserDto.class);
+        User savedUser =  userRepository.save(user);
+        Person person = new Person();
+        person.setName(savedUser.getName());
+        person.setUserId(savedUser.getId());
+        String token = jwtService.generateAccessToken(savedUser);
+        String bearerToken = "Bearer " + token;
+        connectionClient.savePersonData(bearerToken, person);
+        return modelMapper.map(savedUser, UserDto.class);
     }
 
     public String login(LoginRequestDto loginRequestDto) {
