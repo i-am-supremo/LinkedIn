@@ -31,11 +31,8 @@ public class AuthService {
         User user = modelMapper.map(signupRequestDto, User.class);
         user.setPassword(PasswordUtil.hashPassword(signupRequestDto.getPassword()));
         User savedUser =  userRepository.save(user);
-        Person person = new Person();
-        person.setName(savedUser.getName());
-        person.setUserId(savedUser.getId());
-        String token = jwtService.generateAccessToken(savedUser);
-        String bearerToken = "Bearer " + token;
+        Person person = Person.builder().name(savedUser.getName()).userId(savedUser.getId()).build();
+        String bearerToken = "Bearer " + jwtService.generateAccessToken(savedUser);
         connectionClient.savePersonData(bearerToken, person);
         return modelMapper.map(savedUser, UserDto.class);
     }
